@@ -1,6 +1,6 @@
 import socket
 
-from common import BLOCK_SIZE, NetApp, NetAppProtocol
+from common import BLOCK_SIZE, UDP_TIMEOUT, NetApp, NetAppProtocol
 from utils import enterIp, enterPort, enterFilename
 
 class Server(NetApp):
@@ -34,7 +34,29 @@ class Server(NetApp):
         conn.close()
     
     def __getFileOverUdp(self, recv_filepath: str):
-        pass
+        #receiving file
+        print("Receiving file")
+        recv_file = open(recv_filepath, "wb")
+        try:
+            recv_block, client_addr = self.socket.recvfrom(BLOCK_SIZE)
+            while recv_block:
+                recv_file.write(recv_block)
+                self.socket.settimeout(UDP_TIMEOUT)
+                recv_block, client_addr = self.socket.recvfrom(BLOCK_SIZE)
+        except socket.timeout:
+            pass
+        recv_file.close()
+        print("File received!")
+
+        # sending file
+        print("Sending file...")
+        send_file = open(recv_filepath, "rb")
+        send_block = send_file.read(BLOCK_SIZE)
+        while send_block:
+            self.socket.sendto(send_block, client_addr)
+            send_block = send_file.read(BLOCK_SIZE)
+        send_file.close()
+        print("Finished sending file!")
 
     def getFile(self, filepath: str):
         match self.protocol.value:
@@ -51,7 +73,8 @@ class Server(NetApp):
         recv_filepath = enterFilename("Enter existing filename, where to save data from client: ")
 
         self.socket.bind((str(server_ip), port))
-        self.socket.listen(5)
+        if self.protocol.value == NetAppProtocol.TCP.value:
+            self.socket.listen(5)
 
         while True:
             self.getFile(recv_filepath)

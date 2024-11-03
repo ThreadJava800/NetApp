@@ -3,6 +3,7 @@ from enum import Enum
 import socket
 
 BLOCK_SIZE = 1024
+UDP_TIMEOUT = 2
 
 class NetAppType(Enum):
     SERVER = 1
